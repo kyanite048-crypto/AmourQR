@@ -38,7 +38,7 @@ const MyApp: AppType<{ messages?: AbstractIntlMessages; session: Session | null 
                     { content: "minimum-scale=1, initial-scale=1, width=device-width", name: "viewport" },
                 ]}
                 openGraph={{
-                    images: [{ url: `${env.NEXT_PUBLIC_PROD_URL}/menufic_banner.jpg` }],
+                    images: [{ url: `${env.NEXT_PUBLIC_PROD_URL}/menufic_baner.jpg` }],
                     siteName: "amourqr.com",
                     type: "website",
                     url: env.NEXT_PUBLIC_PROD_URL,
