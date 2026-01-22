@@ -4,6 +4,20 @@
 
 [build.environment]
   NODE_VERSION = "18"
+  # Skip env validation at build time - NextAuth env vars are set at runtime
+  SKIP_ENV_VALIDATION = "true"
+
+# Ensure NEXTAUTH_URL is set correctly for the production site
+[context.production.environment]
+  NEXTAUTH_URL = "https://amourqr.netlify.app"
+
+# For deploy previews, use the deploy URL
+[context.deploy-preview.environment]
+  # Netlify sets DEPLOY_PRIME_URL automatically for deploy previews
+
+# For branch deploys, use the deploy URL
+[context.branch-deploy.environment]
+  # Netlify sets DEPLOY_PRIME_URL automatically for branch deploys
 
 [[plugins]]
   package = "@netlify/plugin-nextjs"
