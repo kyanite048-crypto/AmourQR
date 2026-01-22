@@ -1,50 +1,93 @@
 import NextAuth, { type NextAuthOptions } from "next-auth";
+import type { NextApiRequest, NextApiResponse } from "next";
 import CredentialsProvider from "next-auth/providers/credentials";
 import GoogleProvider from "next-auth/providers/google";
 
-import { env } from "src/env/server.mjs";
+/**
+ * Get the base URL for NextAuth at runtime.
+ * For Netlify: uses NEXTAUTH_URL env var, or falls back to URL context if available.
+ * This ensures OAuth callbacks work correctly in serverless environments.
+ */
+function getBaseUrl(req?: NextApiRequest): string | undefined {
+    // First check for explicit NEXTAUTH_URL
+    if (process.env.NEXTAUTH_URL) {
+        return process.env.NEXTAUTH_URL;
+    }
 
-export const authOptions: NextAuthOptions = {
-    // Include user.id on session
-    callbacks: {
-        session({ session, token }) {
-            if (session.user && token.sub) {
-                // eslint-disable-next-line no-param-reassign
-                session.user.id = token.sub;
-            }
-            return session;
-        },
-    },
-    pages: { signIn: "/auth/signin" },
-    providers: [
-        GoogleProvider({
-            clientId: env.GOOGLE_CLIENT_ID!,
-            clientSecret: env.GOOGLE_CLIENT_SECRET!,
-        }),
-        CredentialsProvider({
-            authorize(credentials) {
-                if (env.TEST_MENUFIC_USER_LOGIN_KEY && credentials?.loginKey === env.TEST_MENUFIC_USER_LOGIN_KEY) {
-                    return { email: "testUser@gmail.com", id: "testUser", image: "", name: "Test User" };
+    // For Netlify deployments, try to construct URL from request headers
+    if (req) {
+        const host = req.headers["x-forwarded-host"] || req.headers.host;
+        const protocol = req.headers["x-forwarded-proto"] || "https";
+        if (host) {
+            return `${protocol}://${host}`;
+        }
+    }
+
+    // Fallback for Netlify URL context
+    if (process.env.URL) {
+        return process.env.URL;
+    }
+
+    return undefined;
+}
+
+/**
+ * Create NextAuth options with dynamic URL handling for Netlify.
+ * Reads environment variables at runtime, not build time.
+ */
+function createAuthOptions(req?: NextApiRequest): NextAuthOptions {
+    return {
+        callbacks: {
+            session({ session, token }) {
+                if (session.user && token.sub) {
+                    // eslint-disable-next-line no-param-reassign
+                    session.user.id = token.sub;
                 }
-                // If you return null then an error will be displayed advising the user to check their details.
-                return null;
-                // You can also Reject this callback with an Error thus the user will be sent to the error page with the error message as a query parameter
+                return session;
             },
-            credentials: { loginKey: { label: "Login Key", type: "password" } },
-            type: "credentials",
-        }),
-    ],
-    session: {
-        // Seconds - How long until an idle session expires and is no longer valid.
-        maxAge: 30 * 24 * 60 * 60, // 30 days
-        strategy: "jwt",
-        // Seconds - Throttle how frequently to write to database to extend a session.
-        // Use it to limit write operations. Set to 0 to always update the database.
-        // Note: This option is ignored if using JSON Web Tokens
-        updateAge: 24 * 60 * 60, // 24 hours
-    },
-};
+        },
+        pages: { signIn: "/auth/signin" },
+        providers: [
+            GoogleProvider({
+                clientId: process.env.GOOGLE_CLIENT_ID!,
+                clientSecret: process.env.GOOGLE_CLIENT_SECRET!,
+            }),
+            CredentialsProvider({
+                authorize(credentials) {
+                    if (
+                        process.env.TEST_MENUFIC_USER_LOGIN_KEY &&
+                        credentials?.loginKey === process.env.TEST_MENUFIC_USER_LOGIN_KEY
+                    ) {
+                        return { email: "testUser@gmail.com", id: "testUser", image: "", name: "Test User" };
+                    }
+                    return null;
+                },
+                credentials: { loginKey: { label: "Login Key", type: "password" } },
+                type: "credentials",
+            }),
+        ],
+        secret: process.env.NEXTAUTH_SECRET,
+        session: {
+            maxAge: 30 * 24 * 60 * 60, // 30 days
+            strategy: "jwt",
+            updateAge: 24 * 60 * 60, // 24 hours
+        },
+    };
+}
 
-const handler = NextAuth(authOptions);
+// Export authOptions for use elsewhere (e.g., getServerSideProps)
+export const authOptions: NextAuthOptions = createAuthOptions();
 
-export { handler as GET, handler as POST };
+// Pages Router handler - uses default export
+export default async function handler(req: NextApiRequest, res: NextApiResponse) {
+    // Dynamically set NEXTAUTH_URL at runtime if not already set
+    const baseUrl = getBaseUrl(req);
+    if (baseUrl && !process.env.NEXTAUTH_URL) {
+        process.env.NEXTAUTH_URL = baseUrl;
+    }
+
+    // Create auth options with request context for proper URL resolution
+    const options = createAuthOptions(req);
+
+    return NextAuth(req, res, options);
+}

@@ -1,10 +1,14 @@
 // @ts-check
 import { withSentryConfig } from "@sentry/nextjs";
+
 /**
  * Run `build` or `dev` with `SKIP_ENV_VALIDATION` to skip env validation.
- * This is especially useful for Docker builds.
+ * This is especially useful for Docker builds and Netlify deployments.
+ * On Netlify, certain env vars like NEXTAUTH_URL are set at runtime,
+ * so we skip validation at build time to avoid failures.
  */
-if (!process.env.SKIP_ENV_VALIDATION) {
+const isNetlify = process.env.NETLIFY === "true";
+if (!process.env.SKIP_ENV_VALIDATION && !isNetlify) {
     await import("./src/env/server.mjs");
 }
 
@@ -26,8 +30,17 @@ const config = {
     swcMinify: true,
 };
 
+// Only enable Sentry source map uploads when all required credentials are present
+const hasSentryCredentials = !!(
+    process.env.SENTRY_ORG &&
+    process.env.SENTRY_PROJECT &&
+    process.env.SENTRY_AUTH_TOKEN
+);
+
 const sentryWebpackPluginOptions = {
-    dryRun: !process.env.VERCEL,
+    // Enable Sentry uploads only if credentials are fully configured
+    // This prevents build failures when Sentry credentials are not set
+    dryRun: !hasSentryCredentials,
     silent: true,
 };
 
