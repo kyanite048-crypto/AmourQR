@@ -3,23 +3,12 @@ import { useMemo, useRef, useState } from "react";
 
 import { useAutoAnimate } from "@formkit/auto-animate/react";
 import { Carousel } from "@mantine/carousel";
-import {
-    ActionIcon,
-    Box,
-    createStyles,
-    Flex,
-    MediaQuery,
-    SimpleGrid,
-    Stack,
-    Tabs,
-    Text,
-    useMantineColorScheme,
-} from "@mantine/core";
+import { ActionIcon, Box, Button, createStyles, Flex, Image, MediaQuery, SimpleGrid, Stack, Text, useMantineColorScheme } from "@mantine/core";
 import { IconMapPin, IconMoonStars, IconPhone, IconSun } from "@tabler/icons";
 import Autoplay from "embla-carousel-autoplay";
 import { useTranslations } from "next-intl";
 
-import type { Category, Image, Menu, MenuItem, Restaurant } from "@prisma/client";
+import type { Category, Image as PrismaImage, Menu, MenuItem, Restaurant } from "@prisma/client";
 
 import { Black, White } from "src/styles/theme";
 
@@ -106,9 +95,9 @@ const useStyles = createStyles((theme) => ({
 
 interface Props {
     restaurant: Restaurant & {
-        banners: Image[];
-        image: Image | null;
-        menus: (Menu & { categories: (Category & { items: (MenuItem & { image: Image | null })[] })[] })[];
+        banners: PrismaImage[];
+        image: PrismaImage | null;
+        menus: (Menu & { categories: (Category & { items: (MenuItem & { image: PrismaImage | null })[] })[] })[];
     };
 }
 
@@ -119,6 +108,7 @@ export const RestaurantMenu: FC<Props> = ({ restaurant }) => {
     const { colorScheme, toggleColorScheme } = useMantineColorScheme();
     const [menuParent] = useAutoAnimate<HTMLDivElement>();
     const [selectedMenu, setSelectedMenu] = useState<string | null | undefined>(restaurant?.menus?.[0]?.id);
+    const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
     const t = useTranslations("menu");
 
     const menuDetails = useMemo(
@@ -126,7 +116,19 @@ export const RestaurantMenu: FC<Props> = ({ restaurant }) => {
         [selectedMenu, restaurant]
     );
 
-    const images: Image[] = useMemo(() => {
+    const categories = useMemo(
+        () => menuDetails?.categories?.filter((category) => category?.items?.length) || [],
+        [menuDetails]
+    );
+
+    // Initialize selected category when menu changes
+    useMemo(() => {
+        if (categories.length > 0 && !selectedCategory) {
+            setSelectedCategory(categories[0]?.id || null);
+        }
+    }, [categories, selectedCategory]);
+
+    const images: PrismaImage[] = useMemo(() => {
         const banners = restaurant?.banners;
         if (restaurant?.image) {
             return [restaurant?.image, ...banners];
@@ -134,7 +136,7 @@ export const RestaurantMenu: FC<Props> = ({ restaurant }) => {
         return banners;
     }, [restaurant]);
 
-    const haveMenuItems = menuDetails?.categories?.some((category) => category?.items?.length > 0);
+    const haveMenuItems = categories.length > 0;
 
     return (
         <Box mih="calc(100vh - 100px)">
@@ -224,28 +226,97 @@ export const RestaurantMenu: FC<Props> = ({ restaurant }) => {
                     )}
                 </Stack>
             </MediaQuery>
-            <Tabs my={40} onTabChange={setSelectedMenu} value={selectedMenu}>
-                <Tabs.List>
+            <Box my={40}>
+                <Box
+                    className="flex overflow-x-auto whitespace-nowrap gap-3 pb-2"
+                    sx={{
+                        "&::-webkit-scrollbar": { display: "none" },
+                        scrollbarWidth: "none",
+                        msOverflowStyle: "none",
+                    }}
+                >
                     {restaurant?.menus?.map((menu) => (
-                        <Tabs.Tab key={menu.id} px="lg" value={menu.id}>
-                            <Text color={theme.black} size="lg" weight={selectedMenu === menu.id ? "bold" : "normal"}>
-                                {menu.name}
-                            </Text>
-                            <Text color={theme.colors.dark[8]} opacity={selectedMenu === menu.id ? 1 : 0.5} size="xs">
-                                {menu.availableTime}
-                            </Text>
-                        </Tabs.Tab>
+                        <Button
+                            key={menu.id}
+                            className="flex-shrink-0 px-4 py-2 rounded-lg border"
+                            component="button"
+                            onClick={() => setSelectedMenu(menu.id)}
+                            variant={selectedMenu === menu.id ? "filled" : "outline"}
+                        >
+                            <Box>
+                                <Text color={theme.black} size="lg" weight={selectedMenu === menu.id ? "bold" : "normal"}>
+                                    {menu.name}
+                                </Text>
+                                <Text color={theme.colors.dark[8]} opacity={selectedMenu === menu.id ? 1 : 0.5} size="xs">
+                                    {menu.availableTime}
+                                </Text>
+                            </Box>
+                        </Button>
                     ))}
-                </Tabs.List>
-            </Tabs>
+                </Box>
+            </Box>
+
+            {/* Mobile Category Horizontal Scroll */}
+            <MediaQuery smallerThan="xs" styles={{ display: "none" }}>
+                <Box
+                    className="flex overflow-x-auto whitespace-nowrap gap-3 pb-2"
+                    sx={{
+                        "&::-webkit-scrollbar": { display: "none" },
+                        scrollbarWidth: "none",
+                        msOverflowStyle: "none",
+                    }}
+                >
+                    {categories.map((category) => (
+                        <Button
+                            key={category.id}
+                            className="flex-shrink-0 px-4 py-2 rounded-lg border"
+                            component="button"
+                            onClick={() => setSelectedCategory(category.id)}
+                            variant={selectedCategory === category.id ? "filled" : "outline"}
+                        >
+                            <Flex align="center" gap="xs">
+                                {category.imageUrl && (
+                                    <Image
+                                        alt={category.name}
+                                        className="w-8 h-8 object-cover rounded-md"
+                                        src={category.imageUrl}
+                                    />
+                                )}
+                                <Text
+                                    color={theme.black}
+                                    size="sm"
+                                    weight={selectedCategory === category.id ? "bold" : "normal"}
+                                >
+                                    {category.name}
+                                </Text>
+                            </Flex>
+                        </Button>
+                    ))}
+                </Box>
+            </MediaQuery>
+
             <Box ref={menuParent}>
-                {menuDetails?.categories
-                    ?.filter((category) => category?.items.length)
-                    ?.map((category) => (
-                        <Box key={category.id}>
-                            <Text my="lg" size="lg" weight={600}>
-                                {category.name}
-                            </Text>
+                {categories
+                    .filter((category) => category?.items.length)
+                    .map((category) => (
+                        <Box key={category.id} id={`category-${category.id}`} my="lg">
+                            {/* Desktop: Show category header */}
+                            <MediaQuery largerThan="xs" styles={{ display: "block" }}>
+                                <Flex align="center" gap="sm" mb="md">
+                                    {category.imageUrl ? (
+                                        <Image
+                                            alt={category.name}
+                                            className="w-16 h-16 object-cover rounded-md"
+                                            src={category.imageUrl}
+                                        />
+                                    ) : (
+                                        <Box className="w-16 h-16 object-cover rounded-md bg-gray-200" />
+                                    )}
+                                    <Text size="xl" weight={600}>
+                                        {category.name}
+                                    </Text>
+                                </Flex>
+                            </MediaQuery>
                             <SimpleGrid
                                 breakpoints={[
                                     { cols: 3, minWidth: "lg" },

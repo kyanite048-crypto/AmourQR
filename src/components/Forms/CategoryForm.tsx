@@ -12,6 +12,7 @@ import { api } from "src/utils/api";
 import { showErrorToast, showSuccessToast } from "src/utils/helpers";
 import { categoryInput } from "src/utils/validators";
 
+import { ImageUpload } from "../ImageUpload";
 import { Modal } from "../Modal";
 
 interface Props extends ModalProps {
@@ -52,16 +53,24 @@ export const CategoryForm: FC<Props> = ({ opened, onClose, menuId, categoryItem,
         },
     });
 
-    const { getInputProps, onSubmit, isDirty, resetDirty, setValues } = useForm({
-        initialValues: { name: categoryItem?.name || "" },
+    const { getInputProps, onSubmit, setValues, isDirty, resetDirty, values } = useForm({
+        initialValues: {
+            imageBase64: "",
+            imagePath: categoryItem?.imageUrl || "",
+            name: categoryItem?.name || "",
+        },
         validate: zodResolver(categoryInput),
     });
 
     useEffect(() => {
         if (opened) {
-            const values = { name: categoryItem?.name || "" };
-            setValues(values);
-            resetDirty(values);
+            const newValues = {
+                imageBase64: "",
+                imagePath: categoryItem?.imageUrl || "",
+                name: categoryItem?.name || "",
+            };
+            setValues(newValues);
+            resetDirty(newValues);
         }
     }, [categoryItem, opened]);
 
@@ -95,6 +104,15 @@ export const CategoryForm: FC<Props> = ({ opened, onClose, menuId, categoryItem,
                         placeholder={t("inputNamePlaceholder")}
                         withAsterisk
                         {...getInputProps("name")}
+                        autoFocus
+                    />
+                    <ImageUpload
+                        disabled={loading}
+                        height={200}
+                        imageUrl={values?.imagePath}
+                        onImageCrop={(imageBase64, imagePath) => setValues({ imageBase64, imagePath })}
+                        onImageDeleteClick={() => setValues({ imageBase64: "", imagePath: "" })}
+                        width={200}
                     />
                     <Group mt="md" position="right">
                         <Button data-testid="save-category-form" loading={loading} px="xl" type="submit">

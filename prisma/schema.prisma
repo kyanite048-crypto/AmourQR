@@ -54,6 +54,7 @@ model Category {
     createdAt DateTime   @default(now())
     updatedAt DateTime   @updatedAt
     name      String
+    imageUrl  String?
     position  Int
     items     MenuItem[] @relation("MenuItemsOfCategory")
     menu      Menu?      @relation("CategoriesOfMenu", fields: [menuId], references: [id])

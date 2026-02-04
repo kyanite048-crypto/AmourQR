@@ -9,7 +9,6 @@ import { DragDropContext, Droppable } from "react-beautiful-dnd";
 
 import type { Image, MenuItem } from "@prisma/client";
 
-import { env } from "src/env/client.mjs";
 import { api } from "src/utils/api";
 import { reorderList, showErrorToast } from "src/utils/helpers";
 
@@ -97,8 +96,7 @@ export const MenuItems: FC<Props> = ({ categoryId, menuItems, menuId }) => {
                     )}
                 </Droppable>
             </DragDropContext>
-            {menuItems?.length < Number(env.NEXT_PUBLIC_MAX_MENU_ITEMS_PER_CATEGORY) && (
-                <Flex justify="center">
+            <Flex justify="center">
                     <Button
                         key="add-new-menu-item"
                         data-testid="add-new-menu-item-button"
@@ -111,7 +109,6 @@ export const MenuItems: FC<Props> = ({ categoryId, menuItems, menuId }) => {
                         {t("addMenuItemLabel")}
                     </Button>
                 </Flex>
-            )}
 
             <MenuItemForm
                 categoryId={categoryId}

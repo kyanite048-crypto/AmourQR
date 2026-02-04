@@ -1,7 +1,7 @@
 import type { FC } from "react";
 import { useState } from "react";
 
-import { Accordion, Box, Flex, Text } from "@mantine/core";
+import { Accordion, Box, Flex, Image, Text } from "@mantine/core";
 import { IconGripVertical } from "@tabler/icons";
 import { useTranslations } from "next-intl";
 import { Draggable } from "react-beautiful-dnd";
@@ -58,10 +58,17 @@ export const CategoryElement: FC<Props> = ({ categoryItem, menuId }) => {
                         {...provided.draggableProps}
                     >
                         <Accordion.Control>
-                            <Flex align="center" justify="space-between">
+                            <Flex align="center" justify="space-between" gap="sm">
                                 <Box {...provided.dragHandleProps} className={classes.dragHandle}>
                                     <IconGripVertical size={18} stroke={1.5} />
                                 </Box>
+                                {categoryItem.imageUrl && (
+                                    <Image
+                                        alt={categoryItem.name}
+                                        className="w-12 h-12 object-cover rounded-md"
+                                        src={categoryItem.imageUrl}
+                                    />
+                                )}
                                 <Text sx={{ flex: 1 }}>{categoryItem.name}</Text>
                                 <EditDeleteOptions
                                     onDeleteClick={() => setDeleteCategoryModalOpen(true)}

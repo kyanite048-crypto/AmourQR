@@ -3,7 +3,6 @@ import { z } from "zod";
 
 import type { Image, Prisma, PrismaPromise, Restaurant } from "@prisma/client";
 
-import { env } from "src/env/server.mjs";
 import { createTRPCRouter, protectedProcedure, publicProcedure } from "src/server/api/trpc";
 import { encodeImageToBlurhash, getColor, imageKit, rgba2hex, uploadImage } from "src/server/imageUtil";
 import { bannerInput, id, restaurantId, restaurantInput } from "src/utils/validators";
@@ -11,19 +10,6 @@ import { bannerInput, id, restaurantId, restaurantInput } from "src/utils/valida
 export const restaurantRouter = createTRPCRouter({
     /** Add a banner to a restaurant */
     addBanner: protectedProcedure.input(bannerInput).mutation(async ({ ctx, input }) => {
-        const restaurant = await ctx.prisma.restaurant.findUniqueOrThrow({
-            select: { banners: true },
-            where: { id_userId: { id: input.restaurantId, userId: ctx.session.user.id } },
-        });
-
-        // Check if the maximum banner count of the restaurant has been reached
-        if (restaurant?.banners.length >= Number(env.NEXT_PUBLIC_MAX_BANNERS_PER_RESTAURANT)) {
-            throw new TRPCError({
-                code: "BAD_REQUEST",
-                message: "Maximum number of banners reached",
-            });
-        }
-
         const [uploadedResponse, blurHash, color] = await Promise.all([
             uploadImage(input.imageBase64, `user/${ctx.session.user.id}/restaurant/banners`),
             encodeImageToBlurhash(input.imageBase64),
@@ -43,16 +29,6 @@ export const restaurantRouter = createTRPCRouter({
 
     /** Create a new restaurant for the user */
     create: protectedProcedure.input(restaurantInput).mutation(async ({ ctx, input }) => {
-        const count = await ctx.prisma.restaurant.count({ where: { userId: ctx.session.user.id } });
-
-        // Check if user has reached the maximum number of restaurants that he/she can create
-        if (count >= Number(env.NEXT_PUBLIC_MAX_RESTAURANTS_PER_USER)) {
-            throw new TRPCError({
-                code: "BAD_REQUEST",
-                message: "Maximum number of restaurants reached",
-            });
-        }
-
         const [uploadedResponse, blurHash, color] = await Promise.all([
             uploadImage(input.imageBase64, `user/${ctx.session.user.id}/restaurant`),
             encodeImageToBlurhash(input.imageBase64),

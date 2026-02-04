@@ -1,9 +1,7 @@
-import { TRPCError } from "@trpc/server";
 import { z } from "zod";
 
 import type { PrismaPromise } from "@prisma/client";
 
-import { env } from "src/env/server.mjs";
 import { createTRPCRouter, protectedProcedure } from "src/server/api/trpc";
 import { imageKit } from "src/server/imageUtil";
 import { id, menuInput, restaurantId } from "src/utils/validators";
@@ -18,14 +16,6 @@ export const menuRouter = createTRPCRouter({
                 where: { restaurantId: input.restaurantId, userId: ctx.session.user.id },
             }),
         ]);
-
-        /** Check whether the maximum number of menus per restaurant has been reached */
-        if (count >= Number(env.NEXT_PUBLIC_MAX_MENUS_PER_RESTAURANT)) {
-            throw new TRPCError({
-                code: "BAD_REQUEST",
-                message: "Reached maximum number of menus per restaurant",
-            });
-        }
 
         return ctx.prisma.menu.create({
             data: {

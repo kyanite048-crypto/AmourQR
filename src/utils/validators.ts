@@ -6,6 +6,8 @@ export const restaurantId = z.object({ restaurantId: z.string().cuid() });
 export const id = z.object({ id: z.string().cuid() });
 
 export const categoryInput = z.object({
+    imageBase64: z.string().optional(),
+    imagePath: z.string().optional(),
     name: z.string().trim().min(1, "Name is required").max(30, "Name cannot be longer than 30 characters"),
 });
 export const menuInput = z.object({

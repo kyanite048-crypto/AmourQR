@@ -14,7 +14,6 @@ import { reorderList, showErrorToast } from "src/utils/helpers";
 
 import { CategoryElement } from "./CategoryElement";
 import { useStyles } from "./styles";
-import { env } from "../../../env/client.mjs";
 import { CategoryForm } from "../../Forms/CategoryForm";
 
 interface Props {
@@ -128,7 +127,7 @@ export const Categories: FC<Props> = ({ menuId }) => {
                     </Center>
                 )}
 
-                {!categoriesLoading && categories?.length < Number(env.NEXT_PUBLIC_MAX_CATEGORIES_PER_MENU) && (
+                {!categoriesLoading && (
                     <Button
                         key="add-new-category"
                         data-testid="add-new-category-button"

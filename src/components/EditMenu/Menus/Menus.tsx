@@ -9,7 +9,6 @@ import { DragDropContext, Droppable } from "react-beautiful-dnd";
 
 import type { Menu } from "@prisma/client";
 
-import { env } from "src/env/client.mjs";
 import { api } from "src/utils/api";
 import { reorderList, showErrorToast } from "src/utils/helpers";
 
@@ -117,7 +116,7 @@ export const Menus: FC<Props> = ({ restaurantId, selectedMenu, setSelectedMenu }
                 {!menusLoading && !selectedMenu && (
                     <Empty height={300} text="Get started by adding the first menu for your restaurant" />
                 )}
-                {!menusLoading && menus?.length < Number(env.NEXT_PUBLIC_MAX_MENUS_PER_RESTAURANT) && (
+                {!menusLoading && (
                     <Box
                         key="add-new-menu"
                         className={cx(classes.item, classes.addItem, menus?.length === 0 && classes.initialAdd)}

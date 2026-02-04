@@ -14,7 +14,6 @@ import { AppShell } from "src/components/AppShell";
 import { IconCard, ImageCard } from "src/components/Cards";
 import { DeleteConfirmModal } from "src/components/DeleteConfirmModal";
 import { RestaurantForm } from "src/components/Forms/RestaurantForm";
-import { env } from "src/env/client.mjs";
 import { api } from "src/utils/api";
 import { showErrorToast, showSuccessToast } from "src/utils/helpers";
 
@@ -104,9 +103,8 @@ const RestaurantsListPage: NextPage = () => {
                                 {restaurants?.map((item) => (
                                     <RestaurantCard key={item.id} item={item} />
                                 ))}
-                                {restaurants &&
-                                    restaurants?.length < Number(env.NEXT_PUBLIC_MAX_RESTAURANTS_PER_USER) && (
-                                        <IconCard
+                                {restaurants && (
+                                    <IconCard
                                             key="add-new-restaurant"
                                             Icon={IconCirclePlus}
                                             onClick={() => setRestaurantFormOpen(true)}

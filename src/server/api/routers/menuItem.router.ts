@@ -1,9 +1,7 @@
-import { TRPCError } from "@trpc/server";
 import { z } from "zod";
 
 import type { Image, MenuItem, Prisma } from "@prisma/client";
 
-import { env } from "src/env/server.mjs";
 import { createTRPCRouter, protectedProcedure } from "src/server/api/trpc";
 import { encodeImageToBlurhash, getColor, imageKit, rgba2hex, uploadImage } from "src/server/imageUtil";
 import { categoryId, id, menuId, menuItemInput } from "src/utils/validators";
@@ -18,14 +16,6 @@ export const menuItemRouter = createTRPCRouter({
                 where: { categoryId: input.categoryId, userId: ctx.session.user.id },
             }),
         ]);
-
-        /** Check if the maximum number of items per category has been reached */
-        if (count >= Number(env.NEXT_PUBLIC_MAX_MENU_ITEMS_PER_CATEGORY)) {
-            throw new TRPCError({
-                code: "BAD_REQUEST",
-                message: "Reached maximum number of menu items per category",
-            });
-        }
 
         const createData: Prisma.MenuItemCreateInput = {
             category: { connect: { id_userId: { id: input.categoryId, userId: ctx.session.user.id } } },

@@ -17,7 +17,6 @@ import { IconCard, ImageCard } from "src/components/Cards";
 import { DeleteConfirmModal } from "src/components/DeleteConfirmModal";
 import { BannerForm } from "src/components/Forms/BannerForm";
 import { PublishButton } from "src/components/PublishButton";
-import { env } from "src/env/client.mjs";
 import { api } from "src/utils/api";
 import { showErrorToast, showSuccessToast } from "src/utils/helpers";
 
@@ -128,9 +127,8 @@ const BannersPage: NextPage = () => {
                                             restaurantName={restaurant?.name}
                                         />
                                     ))}
-                                    {banners &&
-                                        banners?.length < Number(env.NEXT_PUBLIC_MAX_BANNERS_PER_RESTAURANT) && (
-                                            <IconCard
+                                    {banners && (
+                                        <IconCard
                                                 key="add-new-banner"
                                                 Icon={IconCirclePlus}
                                                 onClick={() => setBannerFormOpen(true)}

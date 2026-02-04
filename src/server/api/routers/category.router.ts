@@ -1,11 +1,9 @@
-import { TRPCError } from "@trpc/server";
 import { z } from "zod";
 
 import type { PrismaPromise } from "@prisma/client";
 
-import { env } from "src/env/server.mjs";
 import { createTRPCRouter, protectedProcedure } from "src/server/api/trpc";
-import { imageKit } from "src/server/imageUtil";
+import { encodeImageToBlurhash, getColor, imageKit, rgba2hex, uploadImage } from "src/server/imageUtil";
 import { categoryInput, id, menuId } from "src/utils/validators";
 
 export const categoryRouter = createTRPCRouter({
@@ -19,21 +17,24 @@ export const categoryRouter = createTRPCRouter({
             }),
         ]);
 
-        /** Check if the maximum number of categories per menu has been reached */
-        if (count >= Number(env.NEXT_PUBLIC_MAX_CATEGORIES_PER_MENU)) {
-            throw new TRPCError({
-                code: "BAD_REQUEST",
-                message: "Reached maximum number of categories per menu",
-            });
+        const createData = {
+            menuId: input.menuId,
+            name: input.name,
+            position: lastCategoryItem ? lastCategoryItem.position + 1 : 0,
+            userId: ctx.session.user.id,
+        };
+
+        if (input.imageBase64) {
+            const [uploadedResponse, blurHash, color] = await Promise.all([
+                uploadImage(input.imageBase64, `user/${ctx.session.user.id}/category`),
+                encodeImageToBlurhash(input.imageBase64),
+                getColor(input.imageBase64),
+            ]);
+            createData.imageUrl = uploadedResponse.filePath;
         }
 
         return ctx.prisma.category.create({
-            data: {
-                menuId: input.menuId,
-                name: input.name,
-                position: lastCategoryItem ? lastCategoryItem.position + 1 : 0,
-                userId: ctx.session.user.id,
-            },
+            data: createData,
             include: { items: { include: { image: true } } },
         });
     }),
@@ -53,6 +54,15 @@ export const categoryRouter = createTRPCRouter({
                 imagePaths.push(item.imageId);
             }
         });
+
+        // Delete category image if exists
+        if (currentItem.imageUrl) {
+            try {
+                await imageKit.deleteFile(currentItem.imageUrl);
+            } catch (error) {
+                console.error("Failed to delete category image:", error);
+            }
+        }
 
         transactions.push(ctx.prisma.menuItem.deleteMany({ where: { categoryId: input.id } }));
 
@@ -81,8 +91,31 @@ export const categoryRouter = createTRPCRouter({
 
     /** Update the details of a menu category */
     update: protectedProcedure.input(categoryInput.merge(id)).mutation(async ({ ctx, input }) => {
+        const currentItem = await ctx.prisma.category.findUniqueOrThrow({
+            where: { id_userId: { id: input.id, userId: ctx.session.user.id } },
+        });
+
+        const updateData: { name: string; imageUrl?: string } = { name: input.name };
+
+        // Handle image upload/replacement
+        if (input.imageBase64) {
+            // Delete old image if exists
+            if (currentItem.imageUrl) {
+                try {
+                    await imageKit.deleteFile(currentItem.imageUrl);
+                } catch (error) {
+                    console.error("Failed to delete old category image:", error);
+                }
+            }
+
+            const [uploadedResponse] = await Promise.all([
+                uploadImage(input.imageBase64, `user/${ctx.session.user.id}/category`),
+            ]);
+            updateData.imageUrl = uploadedResponse.filePath;
+        }
+
         return ctx.prisma.category.update({
-            data: { name: input.name },
+            data: updateData,
             where: { id_userId: { id: input.id, userId: ctx.session.user.id } },
         });
     }),
